@@ -38,11 +38,17 @@ const upload = multer({
 
 // ── Session ───────────────────────────────────────────────────────────────────
 
+app.set('trust proxy', 1)  // required behind Railway's load balancer
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'kaplan-dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 }
+  cookie: {
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production'
+  }
 }))
 
 app.use(express.json())
@@ -97,6 +103,9 @@ app.post('/api/logout', (req, res) => {
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
+app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'index.html')))
+app.get('/parent.html', (req, res) => res.sendFile(path.join(__dirname, 'parent.html')))
+app.get('/login.html',  (req, res) => res.sendFile(path.join(__dirname, 'login.html')))
 app.use(express.static(path.join(__dirname)))
 
 // ── OpenAI ────────────────────────────────────────────────────────────────────
