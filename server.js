@@ -209,7 +209,7 @@ async function extractText (filePath, mimeType) {
     }
     return null
   } catch (err) {
-    console.error('Text extraction error:', err.message)
+    console.error('Text extraction error:', err.constructor?.name, err.message, err.stack)
     return null
   }
 }
