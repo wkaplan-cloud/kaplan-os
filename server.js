@@ -100,11 +100,12 @@ app.post('/api/login', async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM people WHERE LOWER(name) = LOWER($1)', [name.trim()])
     const person = rows[0]
     if (person && person.password && person.password === password) {
-      req.session.role = 'family'
+      const role = person.is_parent ? 'parent' : 'family'
+      req.session.role = role
       req.session.personId = person.id
       req.session.personName = person.name
       delete req.session.returnTo
-      return res.json({ success: true, role: 'family', redirect: returnTo || '/' })
+      return res.json({ success: true, role, redirect: returnTo || (role === 'parent' ? '/parent.html' : '/') })
     }
   }
 
@@ -337,6 +338,13 @@ app.post('/api/people', requireParent, async (req, res) => {
      password?.trim() || null]
   )
   res.json({ id: rows[0].id })
+})
+
+app.put('/api/people/:id/parent', requireParent, async (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const { is_parent } = req.body
+  await pool.query('UPDATE people SET is_parent = $1 WHERE id = $2', [!!is_parent, id])
+  res.json({ success: true })
 })
 
 app.put('/api/people/:id/password', requireParent, async (req, res) => {

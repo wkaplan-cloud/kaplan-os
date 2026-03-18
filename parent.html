@@ -683,6 +683,14 @@
               ${p.password ? '🔑 Change' : '🔑 Set'}
             </button>
           </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#4B5563;user-select:none">
+              <input type="checkbox" id="par-${p.id}" ${p.is_parent ? 'checked' : ''}
+                onchange="toggleParent(${p.id}, this.checked)"
+                style="width:16px;height:16px;accent-color:#1B3A5C;cursor:pointer">
+              Admin (parent) access
+            </label>
+          </div>
         </div>
       `).join('')
     } catch {
@@ -718,6 +726,19 @@
       loadFamily()
     } catch {
       toast('Failed to add person')
+    }
+  }
+
+  async function toggleParent(id, is_parent) {
+    try {
+      await fetch('/api/people/' + id + '/parent', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_parent })
+      })
+      toast(is_parent ? '✓ Admin access granted' : 'Admin access removed')
+    } catch {
+      toast('Failed to update')
     }
   }
 

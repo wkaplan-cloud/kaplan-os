@@ -70,6 +70,7 @@ async function init () {
   `)
   // Migrations for existing databases
   await pool.query(`ALTER TABLE people ADD COLUMN IF NOT EXISTS password TEXT;`)
+  await pool.query(`ALTER TABLE people ADD COLUMN IF NOT EXISTS is_parent BOOLEAN DEFAULT FALSE;`)
 }
 
 module.exports = { pool, init }
