@@ -239,7 +239,7 @@
     try {
       const people = await (await fetch('/api/people/names')).json()
       nameSelect.innerHTML =
-        '<option value="__parent__">Parent</option>' +
+        '<option value="__parent__">Admin</option>' +
         people.map(p => `<option value="${p.name}">${p.name}</option>`).join('')
     } catch {
       nameSelect.innerHTML = '<option value="__parent__">Parent</option>'
