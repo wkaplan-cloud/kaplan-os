@@ -185,7 +185,9 @@ async function extractText (filePath, mimeType) {
       // Try text extraction first (works for digital PDFs)
       const pdfParse = require('pdf-parse')
       const data = await pdfParse(fs.readFileSync(filePath))
-      const text = data.text.trim()
+      console.log('pdf-parse result type:', typeof data, 'keys:', data ? Object.keys(data) : 'null')
+      console.log('pdf-parse text length:', data?.text?.length, 'preview:', data?.text?.slice(0, 100))
+      const text = data?.text?.trim() || ''
       if (text.length > 50) return text
 
       // Scanned PDF — convert pages to images and run through OpenAI Vision
