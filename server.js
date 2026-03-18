@@ -243,31 +243,41 @@ async function extractText (filePath, mimeType) {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message } = req.body
+    const { message, history } = req.body
     if (!message?.trim()) return res.status(400).json({ error: 'Message is required' })
     if (!openai) return res.status(503).json({ error: 'AI not configured', message: 'Add OPENAI_API_KEY to .env' })
 
     const context      = await buildKnowledgeContext()
     const systemPrompt = context
-      ? `You are Kaplan OS, a warm and reliable family knowledge assistant.
+      ? `You are Kaplan OS, a private family knowledge assistant.
 
-Answer questions using ONLY the family knowledge below. Do not invent or guess any facts.
-If the answer is clearly present, respond naturally, warmly, and briefly (1–3 sentences).
-If not, respond with exactly: UNKNOWN
+Rules — follow these exactly:
+1. Answer using ONLY the family knowledge below. Never invent or guess facts.
+2. If the COMPLETE answer to the question is present → reply naturally and warmly in 1–3 sentences.
+3. If the answer is PARTIALLY present (e.g. you have a birthday month/day but not the year, or a name but not a number) → share what you know, then end your reply with exactly: [UNKNOWN]
+4. If the answer is NOT present at all → respond with exactly: UNKNOWN
 
 --- FAMILY KNOWLEDGE ---
 ${context}
 --- END ---`
       : `You are Kaplan OS. The knowledge base is empty. For every question respond with exactly: UNKNOWN`
 
+    const messages = [{ role: 'system', content: systemPrompt }]
+    if (Array.isArray(history)) {
+      for (const h of history.slice(-6)) {
+        if (h.role === 'user' || h.role === 'assistant') messages.push(h)
+      }
+    }
+    messages.push({ role: 'user', content: message.trim() })
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message.trim() }],
-      max_tokens: 200, temperature: 0.2
+      model: 'gpt-4o-mini', messages, max_tokens: 300, temperature: 0.2
     })
     const reply   = completion.choices[0].message.content.trim()
     const unknown = reply === 'UNKNOWN' || reply.startsWith('UNKNOWN')
-    res.json({ answer: unknown ? null : reply, unknown })
+    const partial = !unknown && reply.includes('[UNKNOWN]')
+    const answer  = partial ? reply.replace('[UNKNOWN]', '').trim() : (unknown ? null : reply)
+    res.json({ answer, unknown: unknown || partial })
   } catch (err) {
     console.error('Chat error:', err.constructor?.name, err.message)
     if (err.status) console.error('OpenAI status:', err.status)
