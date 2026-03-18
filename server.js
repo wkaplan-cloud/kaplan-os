@@ -183,10 +183,9 @@ async function extractText (filePath, mimeType) {
   try {
     if (mimeType === 'application/pdf') {
       // Try text extraction first (works for digital PDFs)
-      const pdfParse = require('pdf-parse')
+      const pdfMod = require('pdf-parse')
+      const pdfParse = pdfMod.default || pdfMod
       const data = await pdfParse(fs.readFileSync(filePath))
-      console.log('pdf-parse result type:', typeof data, 'keys:', data ? Object.keys(data) : 'null')
-      console.log('pdf-parse text length:', data?.text?.length, 'preview:', data?.text?.slice(0, 100))
       const text = data?.text?.trim() || ''
       if (text.length > 50) return text
 
