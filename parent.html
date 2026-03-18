@@ -549,15 +549,21 @@
 
       list.innerHTML = rows.map(q => `
         <div class="card" id="q-${q.id}">
-          <div class="card-label">Question from family</div>
-          <div class="card-question">${esc(q.question)}</div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div class="card-label" style="margin-bottom:0">Question from family</div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button class="btn-sm-ghost" onclick="editQuestion(${q.id})" title="Edit question" style="padding:4px 10px;font-size:12px">✏️ Edit</button>
+              <button class="del-btn" onclick="discardQuestion(${q.id})" title="Discard">✕</button>
+            </div>
+          </div>
+          <div class="card-question" id="qtext-${q.id}">${esc(q.question)}</div>
+          <textarea id="qedit-${q.id}" class="field field-sm" style="display:none;margin-bottom:8px;min-height:unset;height:auto">${esc(q.question)}</textarea>
+          <div id="qedit-actions-${q.id}" style="display:none;gap:6px;margin-bottom:8px">
+            <button class="btn-coral" onclick="saveQuestionEdit(${q.id})" style="font-size:12px;padding:6px 14px">Save</button>
+            <button class="btn-sm-ghost" onclick="cancelQuestionEdit(${q.id})" style="font-size:12px">Cancel</button>
+          </div>
           <div class="card-meta">Asked ${fmt(q.created_at)}</div>
-          <textarea
-            class="field"
-            id="ans-${q.id}"
-            placeholder="Type your answer here…"
-            style="min-height:80px"
-          ></textarea>
+          <textarea class="field" id="ans-${q.id}" placeholder="Type your answer here…" style="min-height:80px"></textarea>
           <div style="display:flex;gap:8px;margin-top:10px">
             <button class="btn-coral" onclick="saveAnswer(${q.id})">Save Answer</button>
           </div>
@@ -575,6 +581,54 @@
       badge.style.display = 'flex'
     } else {
       badge.style.display = 'none'
+    }
+  }
+
+  function editQuestion(id) {
+    document.getElementById('qtext-' + id).style.display = 'none'
+    const editBox = document.getElementById('qedit-' + id)
+    const actions = document.getElementById('qedit-actions-' + id)
+    editBox.style.display = 'block'
+    actions.style.display = 'flex'
+    editBox.focus()
+    editBox.style.height = 'auto'
+    editBox.style.height = editBox.scrollHeight + 'px'
+  }
+
+  function cancelQuestionEdit(id) {
+    document.getElementById('qtext-' + id).style.display = 'block'
+    document.getElementById('qedit-' + id).style.display = 'none'
+    document.getElementById('qedit-actions-' + id).style.display = 'none'
+  }
+
+  async function saveQuestionEdit(id) {
+    const newQ = document.getElementById('qedit-' + id).value.trim()
+    if (!newQ) return
+    try {
+      await fetch('/api/pending/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: newQ })
+      })
+      document.getElementById('qtext-' + id).textContent = newQ
+      cancelQuestionEdit(id)
+      toast('✓ Question updated')
+    } catch {
+      toast('Failed to update')
+    }
+  }
+
+  async function discardQuestion(id) {
+    try {
+      await fetch('/api/pending/' + id, { method: 'DELETE' })
+      const card = document.getElementById('q-' + id)
+      card.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+      card.style.opacity = '0'
+      card.style.transform = 'translateX(10px)'
+      setTimeout(() => { card.remove(); loadInbox() }, 220)
+      toast('Question discarded')
+    } catch {
+      toast('Failed to discard')
     }
   }
 

@@ -308,6 +308,18 @@ app.post('/api/pending', async (req, res) => {
   res.json({ id: rows[0].id, question: question.trim(), status: 'pending' })
 })
 
+app.delete('/api/pending/:id', requireParent, async (req, res) => {
+  await pool.query('DELETE FROM pending_questions WHERE id = $1', [parseInt(req.params.id, 10)])
+  res.json({ success: true })
+})
+
+app.patch('/api/pending/:id', requireParent, async (req, res) => {
+  const { question } = req.body
+  if (!question?.trim()) return res.status(400).json({ error: 'Question required' })
+  await pool.query('UPDATE pending_questions SET question = $1 WHERE id = $2', [question.trim(), parseInt(req.params.id, 10)])
+  res.json({ success: true })
+})
+
 app.post('/api/pending/:id/answer', requireParent, async (req, res) => {
   const id     = parseInt(req.params.id, 10)
   const { answer } = req.body
