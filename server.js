@@ -55,7 +55,7 @@ app.use(express.json())
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-const PUBLIC_PATHS = ['/login.html', '/api/login', '/api/logout',
+const PUBLIC_PATHS = ['/login.html', '/api/login', '/api/logout', '/api/people/names',
                       '/sw.js', '/manifest.json', '/icon.svg']
 
 app.use((req, res, next) => {
@@ -74,26 +74,36 @@ function requireParent (req, res, next) {
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
-app.post('/api/login', (req, res) => {
-  const { password } = req.body
+app.post('/api/login', async (req, res) => {
+  const { name, password } = req.body
   if (!password) return res.status(400).json({ error: 'Password required' })
 
   const parentPw = process.env.PARENT_PASSWORD
-  const familyPw = process.env.FAMILY_PASSWORD
-  if (!parentPw || !familyPw) return res.status(503).json({ error: 'Passwords not configured in .env' })
+  if (!parentPw) return res.status(503).json({ error: 'Passwords not configured in .env' })
 
   const returnTo = req.session.returnTo
 
+  // Parent login
   if (password === parentPw) {
     req.session.role = 'parent'
+    req.session.personName = 'Parent'
     delete req.session.returnTo
     return res.json({ success: true, role: 'parent', redirect: returnTo || '/parent.html' })
   }
-  if (password === familyPw) {
-    req.session.role = 'family'
-    delete req.session.returnTo
-    return res.json({ success: true, role: 'family', redirect: returnTo || '/' })
+
+  // Family member login
+  if (name) {
+    const { rows } = await pool.query('SELECT * FROM people WHERE LOWER(name) = LOWER($1)', [name.trim()])
+    const person = rows[0]
+    if (person && person.password && person.password === password) {
+      req.session.role = 'family'
+      req.session.personId = person.id
+      req.session.personName = person.name
+      delete req.session.returnTo
+      return res.json({ success: true, role: 'family', redirect: returnTo || '/' })
+    }
   }
+
   res.status(401).json({ error: 'Wrong password' })
 })
 
@@ -298,6 +308,12 @@ app.delete('/api/knowledge/:id', requireParent, async (req, res) => {
 
 // ── People ────────────────────────────────────────────────────────────────────
 
+// Public — used by login page to populate name dropdown
+app.get('/api/people/names', async (req, res) => {
+  const { rows } = await pool.query('SELECT id, name FROM people ORDER BY name')
+  res.json(rows)
+})
+
 app.get('/api/people', async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM people ORDER BY name')
   res.json(rows)
@@ -305,17 +321,26 @@ app.get('/api/people', async (req, res) => {
 
 app.post('/api/people', requireParent, async (req, res) => {
   const { name, role, date_of_birth, phone_number,
-          emergency_contact_name, emergency_contact_number, id_number } = req.body
+          emergency_contact_name, emergency_contact_number, id_number, password } = req.body
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' })
   const { rows } = await pool.query(`
     INSERT INTO people (name, role, date_of_birth, phone_number,
-      emergency_contact_name, emergency_contact_number, id_number)
-    VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      emergency_contact_name, emergency_contact_number, id_number, password)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
     [name.trim(), role?.trim() || null, date_of_birth?.trim() || null,
      phone_number?.trim() || null, emergency_contact_name?.trim() || null,
-     emergency_contact_number?.trim() || null, id_number?.trim() || null]
+     emergency_contact_number?.trim() || null, id_number?.trim() || null,
+     password?.trim() || null]
   )
   res.json({ id: rows[0].id })
+})
+
+app.put('/api/people/:id/password', requireParent, async (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const { password } = req.body
+  if (!password?.trim()) return res.status(400).json({ error: 'Password required' })
+  await pool.query('UPDATE people SET password = $1 WHERE id = $2', [password.trim(), id])
+  res.json({ success: true })
 })
 
 app.delete('/api/people/:id', requireParent, async (req, res) => {

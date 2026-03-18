@@ -68,6 +68,8 @@ async function init () {
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
   `)
+  // Migrations for existing databases
+  await pool.query(`ALTER TABLE people ADD COLUMN IF NOT EXISTS password TEXT;`)
 }
 
 module.exports = { pool, init }

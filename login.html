@@ -88,6 +88,25 @@
       text-transform: uppercase; margin-bottom: 8px;
     }
 
+    .name-select {
+      width: 100%; background: #F5F3EF;
+      border: 1.5px solid #E0DCD5; border-radius: 14px;
+      padding: 13px 16px;
+      font-size: 16px; font-family: 'Inter', sans-serif;
+      color: #1A1A1A; outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+      margin-bottom: 16px;
+    }
+    .name-select:focus {
+      border-color: #3B6EA5;
+      box-shadow: 0 0 0 3px rgba(59,110,165,0.12);
+    }
+
     .pw-wrap {
       position: relative; margin-bottom: 20px;
     }
@@ -179,6 +198,11 @@
     <div class="app-name">Kaplan OS</div>
     <div class="app-sub">Family Assistant</div>
 
+    <div class="field-label">Who are you?</div>
+    <select class="name-select" id="nameSelect">
+      <option value="">Loading…</option>
+    </select>
+
     <div class="field-label">Password</div>
     <div class="pw-wrap">
       <input
@@ -199,21 +223,31 @@
     <button class="enter-btn" id="enterBtn" onclick="login()">Enter</button>
     <div class="error-msg" id="errorMsg">Wrong password. Please try again.</div>
 
-    <div class="hint">Parents and family members use different passwords</div>
+    <div class="hint">Select your name, then enter your password</div>
 
   </div>
 </div>
 
 <script>
-  const pwInput  = document.getElementById('pw')
-  const enterBtn = document.getElementById('enterBtn')
-  const errorMsg = document.getElementById('errorMsg')
+  const pwInput    = document.getElementById('pw')
+  const nameSelect = document.getElementById('nameSelect')
+  const enterBtn   = document.getElementById('enterBtn')
+  const errorMsg   = document.getElementById('errorMsg')
 
-  pwInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') login()
-  })
+  // Load family member names
+  async function loadNames () {
+    try {
+      const people = await (await fetch('/api/people/names')).json()
+      nameSelect.innerHTML =
+        '<option value="__parent__">Parent</option>' +
+        people.map(p => `<option value="${p.name}">${p.name}</option>`).join('')
+    } catch {
+      nameSelect.innerHTML = '<option value="__parent__">Parent</option>'
+    }
+  }
+  loadNames()
 
-  // Focus password field on load
+  pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') login() })
   setTimeout(() => pwInput.focus(), 300)
 
   function toggleEye () {
@@ -228,17 +262,21 @@
 
   async function login () {
     const password = pwInput.value.trim()
+    const nameVal  = nameSelect.value
     if (!password) { pwInput.focus(); return }
+    if (!nameVal)  { nameSelect.focus(); return }
 
-    enterBtn.disabled   = true
-    enterBtn.innerHTML  = '<span class="spinner"></span>Checking…'
+    enterBtn.disabled  = true
+    enterBtn.innerHTML = '<span class="spinner"></span>Checking…'
     errorMsg.style.display = 'none'
+
+    const name = nameVal === '__parent__' ? null : nameVal
 
     try {
       const res  = await fetch('/api/login', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ password })
+        body:    JSON.stringify({ name, password })
       })
       const data = await res.json()
 
@@ -258,7 +296,6 @@
     enterBtn.innerHTML = 'Enter'
     errorMsg.textContent   = msg
     errorMsg.style.display = 'block'
-    // Re-trigger shake animation
     errorMsg.style.animation = 'none'
     requestAnimationFrame(() => { errorMsg.style.animation = '' })
     pwInput.value = ''

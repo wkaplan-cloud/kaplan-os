@@ -442,6 +442,7 @@
           <input class="field field-sm" id="pecnum" placeholder="Emergency contact number" style="min-height:unset">
         </div>
         <input class="field field-sm" id="pidnum" placeholder="ID / passport number" style="min-height:unset;margin-top:10px">
+        <input class="field field-sm" id="ppw" type="password" placeholder="Login password (optional — set now or later)" style="min-height:unset;margin-top:10px">
         <button class="btn-navy" onclick="addPerson()">Add Family Member</button>
       </div>
 
@@ -661,17 +662,27 @@
         return
       }
       list.innerHTML = rows.map(p => `
-        <div class="person" id="p-${p.id}">
-          <div class="person-avatar">${roleEmoji(p.role)}</div>
-          <div class="person-body">
-            <div class="person-name">${esc(p.name)}</div>
-            ${p.role ? `<span class="person-role">${esc(p.role)}</span>` : ''}
-            ${p.date_of_birth ? `<div class="person-row"><span>Born</span>${esc(p.date_of_birth)}</div>` : ''}
-            ${p.phone_number  ? `<div class="person-row"><span>Phone</span>${esc(p.phone_number)}</div>` : ''}
-            ${p.id_number     ? `<div class="person-row"><span>ID</span>${esc(p.id_number)}</div>` : ''}
-            ${p.emergency_contact_name ? `<div class="person-row"><span>Emergency</span>${esc(p.emergency_contact_name)}${p.emergency_contact_number ? ' · ' + esc(p.emergency_contact_number) : ''}</div>` : ''}
+        <div class="person" id="p-${p.id}" style="flex-direction:column;gap:12px">
+          <div style="display:flex;gap:14px;align-items:flex-start;width:100%">
+            <div class="person-avatar">${roleEmoji(p.role)}</div>
+            <div class="person-body">
+              <div class="person-name">${esc(p.name)}</div>
+              ${p.role ? `<span class="person-role">${esc(p.role)}</span>` : ''}
+              ${p.date_of_birth ? `<div class="person-row"><span>Born</span>${esc(p.date_of_birth)}</div>` : ''}
+              ${p.phone_number  ? `<div class="person-row"><span>Phone</span>${esc(p.phone_number)}</div>` : ''}
+              ${p.id_number     ? `<div class="person-row"><span>ID</span>${esc(p.id_number)}</div>` : ''}
+              ${p.emergency_contact_name ? `<div class="person-row"><span>Emergency</span>${esc(p.emergency_contact_name)}${p.emergency_contact_number ? ' · ' + esc(p.emergency_contact_number) : ''}</div>` : ''}
+            </div>
+            <button class="del-btn" onclick="delPerson(${p.id})" title="Remove">✕</button>
           </div>
-          <button class="del-btn" onclick="delPerson(${p.id})" title="Remove">✕</button>
+          <div style="display:flex;gap:8px;width:100%">
+            <input class="field field-sm" id="pw-${p.id}" type="password"
+              placeholder="${p.password ? 'Change password…' : 'Set login password…'}"
+              style="min-height:unset;flex:1">
+            <button class="btn-sm-ghost" onclick="setPassword(${p.id})" style="white-space:nowrap">
+              ${p.password ? '🔑 Change' : '🔑 Set'}
+            </button>
+          </div>
         </div>
       `).join('')
     } catch {
@@ -690,7 +701,8 @@
       phone_number:             document.getElementById('pphone').value.trim(),
       emergency_contact_name:   document.getElementById('pecname').value.trim(),
       emergency_contact_number: document.getElementById('pecnum').value.trim(),
-      id_number:                document.getElementById('pidnum').value.trim()
+      id_number:                document.getElementById('pidnum').value.trim(),
+      password:                 document.getElementById('ppw').value.trim()
     }
 
     try {
@@ -699,13 +711,31 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      ;['pname','prole','pdob','pphone','pecname','pecnum','pidnum'].forEach(id => {
+      ;['pname','prole','pdob','pphone','pecname','pecnum','pidnum','ppw'].forEach(id => {
         document.getElementById(id).value = ''
       })
       toast(`✓ ${name} added`)
       loadFamily()
     } catch {
       toast('Failed to add person')
+    }
+  }
+
+  async function setPassword(id) {
+    const input = document.getElementById('pw-' + id)
+    const password = input?.value.trim()
+    if (!password) { input.focus(); return }
+    try {
+      await fetch('/api/people/' + id + '/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+      input.value = ''
+      toast('✓ Password set')
+      loadFamily()
+    } catch {
+      toast('Failed to set password')
     }
   }
 
