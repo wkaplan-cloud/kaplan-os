@@ -2,6 +2,9 @@
   "name": "kaplan-os",
   "version": "1.0.0",
   "description": "Kaplan Family OS — Private AI-powered family knowledge system",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "start": "node server.js"
   },
