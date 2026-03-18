@@ -182,7 +182,7 @@ async function buildKnowledgeContext () {
 async function extractText (filePath, mimeType) {
   try {
     if (mimeType === 'application/pdf') {
-      const pdfParse = require('pdf-parse')
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js')
       const data = await pdfParse(fs.readFileSync(filePath))
       return data.text.trim()
     }
