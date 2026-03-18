@@ -202,13 +202,14 @@ async function extractText (filePath, mimeType) {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 app.post('/api/chat', async (req, res) => {
-  const { message } = req.body
-  if (!message?.trim()) return res.status(400).json({ error: 'Message is required' })
-  if (!openai) return res.status(503).json({ error: 'AI not configured', message: 'Add OPENAI_API_KEY to .env' })
+  try {
+    const { message } = req.body
+    if (!message?.trim()) return res.status(400).json({ error: 'Message is required' })
+    if (!openai) return res.status(503).json({ error: 'AI not configured', message: 'Add OPENAI_API_KEY to .env' })
 
-  const context      = await buildKnowledgeContext()
-  const systemPrompt = context
-    ? `You are Kaplan OS, a warm and reliable family knowledge assistant.
+    const context      = await buildKnowledgeContext()
+    const systemPrompt = context
+      ? `You are Kaplan OS, a warm and reliable family knowledge assistant.
 
 Answer questions using ONLY the family knowledge below. Do not invent or guess any facts.
 If the answer is clearly present, respond naturally, warmly, and briefly (1–3 sentences).
@@ -217,9 +218,8 @@ If not, respond with exactly: UNKNOWN
 --- FAMILY KNOWLEDGE ---
 ${context}
 --- END ---`
-    : `You are Kaplan OS. The knowledge base is empty. For every question respond with exactly: UNKNOWN`
+      : `You are Kaplan OS. The knowledge base is empty. For every question respond with exactly: UNKNOWN`
 
-  try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message.trim() }],
@@ -229,8 +229,8 @@ ${context}
     const unknown = reply === 'UNKNOWN' || reply.startsWith('UNKNOWN')
     res.json({ answer: unknown ? null : reply, unknown })
   } catch (err) {
-    console.error('OpenAI error:', err.message)
-    res.status(500).json({ error: 'AI request failed', message: err.message })
+    console.error('Chat error:', err.message, err.stack)
+    res.status(500).json({ error: 'Something went wrong', message: err.message })
   }
 })
 
