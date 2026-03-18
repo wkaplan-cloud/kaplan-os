@@ -411,6 +411,19 @@ app.post('/api/documents/upload', requireParent, upload.single('file'), async (r
   }
 })
 
+app.get('/api/documents/:id/view', async (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const { rows } = await pool.query('SELECT * FROM document_files WHERE id = $1', [id])
+  if (!rows[0]) return res.status(404).json({ error: 'Not found' })
+  const doc = rows[0]
+  if (!doc.file_path || !fs.existsSync(doc.file_path)) {
+    return res.status(404).json({ error: 'File not found on disk' })
+  }
+  res.setHeader('Content-Type', doc.mime_type)
+  res.setHeader('Content-Disposition', `inline; filename="${doc.original_filename}"`)
+  res.sendFile(doc.file_path)
+})
+
 app.delete('/api/documents/:id', requireParent, async (req, res) => {
   const id  = parseInt(req.params.id, 10)
   const { rows } = await pool.query('SELECT file_path FROM document_files WHERE id = $1', [id])

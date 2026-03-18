@@ -464,6 +464,16 @@
         <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt,.csv,.jpg,.jpeg,.png,.webp" style="display:none">
       </div>
 
+      <!-- Name prompt (shown after file selected) -->
+      <div class="add-form" id="namePrompt" style="display:none">
+        <div class="add-form-title">📄 Name this document</div>
+        <div style="display:flex;gap:8px">
+          <input class="field field-sm" id="docName" placeholder="e.g. Warren's Passport" style="min-height:unset;flex:1">
+          <button class="btn-navy" onclick="confirmUpload()" style="width:auto;margin-top:0;padding:0 18px">Upload</button>
+        </div>
+        <button class="btn-sm-ghost" onclick="cancelUpload()" style="margin-top:8px">Cancel</button>
+      </div>
+
       <!-- Upload progress -->
       <div class="upload-progress" id="uploadProgress" style="display:none">
         <div class="progress-name" id="progressName"></div>
@@ -788,9 +798,35 @@
   dropZone.addEventListener('drop', e => {
     e.preventDefault(); dropZone.classList.remove('dragging')
     const file = e.dataTransfer.files[0]
-    if (file) uploadFile(file)
+    if (file) showNamePrompt(file)
   })
-  fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]) })
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) showNamePrompt(fileInput.files[0]) })
+
+  let _pendingFile = null
+
+  function showNamePrompt(file) {
+    _pendingFile = file
+    document.getElementById('docName').value = file.name.replace(/\.[^.]+$/, '')
+    document.getElementById('namePrompt').style.display = 'block'
+    document.getElementById('dropZone').style.display = 'none'
+    setTimeout(() => document.getElementById('docName').select(), 50)
+  }
+
+  function confirmUpload() {
+    const name = document.getElementById('docName').value.trim()
+    if (!name) { document.getElementById('docName').focus(); return }
+    document.getElementById('namePrompt').style.display = 'none'
+    uploadFile(_pendingFile, name)
+    _pendingFile = null
+  }
+
+  function cancelUpload() {
+    _pendingFile = null
+    fileInput.value = ''
+    document.getElementById('docName').value = ''
+    document.getElementById('namePrompt').style.display = 'none'
+    document.getElementById('dropZone').style.display = 'block'
+  }
 
   function docIcon (mime) {
     if (mime === 'application/pdf')  return { icon: '📄', cls: 'pdf' }
@@ -829,6 +865,12 @@
             ${d.preview
               ? `<div class="doc-preview">${esc(d.preview)}…</div>`
               : `<div class="doc-no-text">No text could be extracted from this file</div>`}
+            <div style="margin-top:10px">
+              <a href="/api/documents/${d.id}/view" target="_blank"
+                style="display:inline-block;background:#EEF3F8;color:#2D5986;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;">
+                👁 View
+              </a>
+            </div>
           </div>`
       }).join('')
     } catch {
@@ -836,8 +878,9 @@
     }
   }
 
-  function uploadFile (file) {
-    progName.textContent = file.name
+  function uploadFile (file, name) {
+    document.getElementById('dropZone').style.display = 'block'
+    progName.textContent = name || file.name
     progBar.style.width  = '0%'
     progPct.textContent  = '0%'
     uploadProg.style.display = 'block'
@@ -846,6 +889,7 @@
 
     const formData = new FormData()
     formData.append('file', file)
+    if (name) formData.append('name', name)
 
     const xhr = new XMLHttpRequest()
     xhr.upload.addEventListener('progress', e => {
