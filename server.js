@@ -229,7 +229,9 @@ ${context}
     const unknown = reply === 'UNKNOWN' || reply.startsWith('UNKNOWN')
     res.json({ answer: unknown ? null : reply, unknown })
   } catch (err) {
-    console.error('Chat error:', err.message, err.stack)
+    console.error('Chat error:', err.constructor?.name, err.message)
+    if (err.status) console.error('OpenAI status:', err.status)
+    if (err.cause) console.error('Caused by:', err.cause?.message || err.cause)
     res.status(500).json({ error: 'Something went wrong', message: err.message })
   }
 })
