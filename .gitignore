@@ -1,0 +1,20 @@
+# Environment — never commit this
+.env
+
+# Database & data
+*.db
+uploads/
+backups/
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+
+# SQLite WAL files
+*.db-shm
+*.db-wal
+
+# Claude Code settings
+.claude/

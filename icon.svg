@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2D5986"/>
+      <stop offset="100%" stop-color="#1B3A5C"/>
+    </linearGradient>
+    <linearGradient id="dot" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F0946E"/>
+      <stop offset="100%" stop-color="#E8714A"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- House shape -->
+  <path d="M256 110 L148 210 L148 390 L232 390 L232 300 L280 300 L280 390 L364 390 L364 210 Z"
+        fill="white" opacity="0.95"/>
+  <!-- Roof peak accent -->
+  <path d="M220 210 L256 178 L292 210" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Accent dot -->
+  <circle cx="376" cy="148" r="38" fill="url(#dot)"/>
+  <!-- Door -->
+  <rect x="232" y="310" width="48" height="80" rx="24" fill="url(#bg)" opacity="0.7"/>
+</svg>

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kaplan">
+  <meta name="theme-color" content="#1B3A5C">
+  <link rel="manifest" href="/manifest.json">
+  <title>Parent Inbox — Kaplan OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%; height: 100dvh;
+      margin: 0; padding: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #F5F3EF;
+      overscroll-behavior: none;
+    }
+
+    .app {
+      display: flex; flex-direction: column;
+      height: 100dvh; max-width: 480px; margin: 0 auto;
+      background: #F5F3EF;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    .hdr {
+      background: linear-gradient(135deg, #2D5986 0%, #1B3A5C 100%);
+      padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 18px;
+      display: flex; align-items: center; gap: 14px;
+      flex-shrink: 0; position: relative; overflow: hidden;
+    }
+    .hdr::before {
+      content: ''; position: absolute; top: -60px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .back-btn {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; color: white; flex-shrink: 0;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .back-btn:active { transform: scale(0.93); background: rgba(255,255,255,0.22); }
+    .hdr-info { flex: 1; }
+    .hdr-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 20px; font-weight: 700;
+      color: white; letter-spacing: -0.025em; line-height: 1;
+    }
+    .hdr-sub { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 3px; letter-spacing: 0.03em; }
+
+    /* ── Tab bar ─────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid #EDE9E3;
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1; padding: 13px 6px 11px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; border: none; background: none;
+      font-size: 10px; font-weight: 600; color: #9CA3AF;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      transition: color 0.15s ease;
+      position: relative;
+    }
+    .tab .tab-icon { font-size: 20px; }
+    .tab.active { color: #1B3A5C; }
+    .tab.active::after {
+      content: '';
+      position: absolute; bottom: 0; left: 20%; right: 20%;
+      height: 2.5px; border-radius: 2px;
+      background: linear-gradient(90deg, #2D5986, #1B3A5C);
+    }
+    .tab-badge {
+      position: absolute; top: 8px; right: calc(50% - 18px);
+      background: #E8714A; color: white;
+      font-size: 9px; font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 8px; padding: 0 4px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Content area ────────────────────────────── */
+    .content {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+    }
+    .content::-webkit-scrollbar { display: none; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Cards ───────────────────────────────────── */
+    .card {
+      background: white; border-radius: 18px;
+      padding: 18px; margin-bottom: 12px;
+      box-shadow: 0 2px 14px rgba(27,58,92,0.07), 0 1px 3px rgba(27,58,92,0.05);
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-label {
+      font-size: 11px; font-weight: 700;
+      color: #9CA3AF; letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .card-question {
+      font-size: 15px; font-weight: 600;
+      color: #1B3A5C; line-height: 1.45; margin-bottom: 14px;
+    }
+    .card-meta {
+      font-size: 12px; color: #9CA3AF;
+      margin-bottom: 12px;
+    }
+
+    /* ── Form elements ───────────────────────────── */
+    .field {
+      width: 100%; background: #F5F3EF;
+      border: 1.5px solid #E0DCD5; border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 14px; font-family: 'Inter', sans-serif;
+      color: #1A1A1A; outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      resize: vertical; min-height: 72px;
+    }
+    .field:focus {
+      border-color: #3B6EA5;
+      box-shadow: 0 0 0 3px rgba(59,110,165,0.12);
+    }
+    .field::placeholder { color: #BAB5AE; }
+    .field-sm {
+      min-height: unset; resize: none; height: 44px;
+      padding: 10px 14px; font-size: 14px;
+    }
+
+    .btn-navy {
+      background: linear-gradient(135deg, #3B6EA5, #1B3A5C);
+      color: white; border: none; border-radius: 12px;
+      padding: 11px 20px; font-size: 14px; font-weight: 600;
+      cursor: pointer; width: 100%; margin-top: 10px;
+      box-shadow: 0 3px 12px rgba(27,58,92,0.28);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn-navy:active { transform: scale(0.97); opacity: 0.88; }
+    .btn-navy:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-coral {
+      background: linear-gradient(135deg, #E8714A, #D55A30);
+      color: white; border: none; border-radius: 11px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 2px 10px rgba(232,113,74,0.3);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn-coral:active { transform: scale(0.95); opacity: 0.88; }
+
+    .btn-sm-ghost {
+      background: none; border: 1.5px solid #E0DCD5;
+      border-radius: 10px; padding: 7px 14px;
+      font-size: 13px; color: #9CA3AF; cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .btn-sm-ghost:active { border-color: #FECACA; color: #DC2626; }
+
+    /* ── Section headers ─────────────────────────── */
+    .section-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 17px; font-weight: 700;
+      color: #1B3A5C; letter-spacing: -0.02em;
+    }
+
+    /* ── Add form accordion ──────────────────────── */
+    .add-form {
+      background: white; border-radius: 18px;
+      padding: 18px; margin-bottom: 16px;
+      box-shadow: 0 2px 14px rgba(27,58,92,0.07);
+    }
+    .add-form-title {
+      font-size: 14px; font-weight: 600; color: #1B3A5C;
+      margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ── Knowledge entry ─────────────────────────── */
+    .entry {
+      background: white; border-radius: 16px;
+      padding: 16px; margin-bottom: 10px;
+      box-shadow: 0 2px 10px rgba(27,58,92,0.06);
+      display: flex; gap: 12px; align-items: flex-start;
+      animation: fadeIn 0.2s ease;
+    }
+    .entry-body { flex: 1; min-width: 0; }
+    .entry-q { font-size: 13px; font-weight: 600; color: #1B3A5C; margin-bottom: 4px; }
+    .entry-a { font-size: 13px; color: #4B5563; line-height: 1.5; }
+    .entry-cat {
+      display: inline-block; margin-top: 6px;
+      background: #EEF3F8; color: #2D5986;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 6px;
+    }
+    .del-btn {
+      width: 30px; height: 30px; flex-shrink: 0;
+      background: #FEF2F2; border: none; border-radius: 8px;
+      color: #FCA5A5; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .del-btn:active { background: #FECACA; color: #DC2626; }
+
+    /* ── Person card ─────────────────────────────── */
+    .person {
+      background: white; border-radius: 18px;
+      padding: 18px; margin-bottom: 12px;
+      box-shadow: 0 2px 14px rgba(27,58,92,0.07);
+      display: flex; gap: 14px; align-items: flex-start;
+      animation: fadeIn 0.2s ease;
+    }
+    .person-avatar {
+      width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(135deg, #2D5986, #1B3A5C);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 3px 10px rgba(27,58,92,0.22);
+    }
+    .person-body { flex: 1; min-width: 0; }
+    .person-name { font-size: 16px; font-weight: 700; color: #1B3A5C; letter-spacing: -0.01em; }
+    .person-role {
+      display: inline-block; margin: 4px 0 8px;
+      background: #F5F3EF; color: #6B7280;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 7px;
+    }
+    .person-row { font-size: 13px; color: #4B5563; margin-bottom: 3px; display: flex; gap: 6px; }
+    .person-row span { color: #9CA3AF; font-size: 12px; min-width: 80px; }
+
+    /* ── Empty state ─────────────────────────────── */
+    .empty {
+      text-align: center; padding: 48px 24px;
+      color: #9CA3AF;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; line-height: 1.6; }
+
+    /* ── Drop zone ───────────────────────────────── */
+    .drop-zone {
+      background: white; border-radius: 20px;
+      border: 2px dashed #E0DCD5;
+      padding: 32px 24px; text-align: center;
+      cursor: pointer; margin-bottom: 16px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .drop-zone:hover, .drop-zone.dragging {
+      border-color: #3B6EA5; background: #EEF3F8;
+    }
+    .drop-icon { font-size: 36px; margin-bottom: 10px; }
+    .drop-title { font-size: 15px; font-weight: 600; color: #1B3A5C; margin-bottom: 4px; }
+    .drop-sub   { font-size: 13px; color: #9CA3AF; margin-bottom: 8px; }
+    .drop-types {
+      display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+    }
+    .drop-types { font-size: 11px; color: #BAB5AE; letter-spacing: 0.04em; }
+
+    /* ── Upload progress ─────────────────────────── */
+    .upload-progress {
+      background: white; border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(27,58,92,0.07);
+    }
+    .progress-name { font-size: 13px; font-weight: 600; color: #1B3A5C; margin-bottom: 8px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .progress-bar-wrap { background: #F5F3EF; border-radius: 6px; height: 6px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #3B6EA5, #1B3A5C);
+      border-radius: 6px; width: 0%; transition: width 0.2s ease; }
+    .progress-pct { font-size: 11px; color: #9CA3AF; text-align: right; margin-top: 4px; }
+
+    /* ── Doc card ─────────────────────────────────── */
+    .doc-card {
+      background: white; border-radius: 16px;
+      padding: 16px; margin-bottom: 10px;
+      box-shadow: 0 2px 10px rgba(27,58,92,0.06);
+      animation: fadeIn 0.2s ease;
+    }
+    .doc-top { display: flex; gap: 12px; align-items: flex-start; }
+    .doc-icon {
+      width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .doc-icon.pdf  { background: #FEF2F2; }
+    .doc-icon.word { background: #EEF3F8; }
+    .doc-icon.img  { background: #F0FDF4; }
+    .doc-icon.txt  { background: #FFFBEB; }
+    .doc-body { flex: 1; min-width: 0; }
+    .doc-name { font-size: 14px; font-weight: 600; color: #1B3A5C;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .doc-meta { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
+    .doc-preview {
+      font-size: 12px; color: #6B7280; line-height: 1.5;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid #F5F3EF;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .doc-no-text { font-size: 12px; color: #BAB5AE; margin-top: 8px; font-style: italic; }
+
+    /* ── Toast ───────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: #1B3A5C; color: white;
+      padding: 12px 22px; border-radius: 30px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(27,58,92,0.35);
+      z-index: 100;
+      animation: toastIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      white-space: nowrap;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ── Answered badge ──────────────────────────── */
+    .answered-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #ECFDF5; color: #065F46;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 8px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="hdr">
+    <a href="/" class="back-btn" title="Back to chat">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </a>
+    <div class="hdr-info">
+      <div class="hdr-title">Parent Inbox</div>
+      <div class="hdr-sub">Manage family knowledge</div>
+    </div>
+    <button class="back-btn" onclick="logout()" title="Log out">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Tab bar -->
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('inbox', this)">
+      <span class="tab-icon">📥</span>
+      Inbox
+      <span class="tab-badge" id="inboxBadge" style="display:none"></span>
+    </button>
+    <button class="tab" onclick="setTab('knowledge', this)">
+      <span class="tab-icon">📚</span>
+      Knowledge
+    </button>
+    <button class="tab" onclick="setTab('family', this)">
+      <span class="tab-icon">👥</span>
+      Family
+    </button>
+    <button class="tab" onclick="setTab('docs', this)">
+      <span class="tab-icon">📎</span>
+      Docs
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content">
+
+    <!-- ── INBOX ──────────────────────────────────── -->
+    <div class="panel active" id="panel-inbox">
+      <div id="inboxList"><div class="empty"><div class="empty-icon">📬</div><div class="empty-text">Loading…</div></div></div>
+    </div>
+
+    <!-- ── KNOWLEDGE ──────────────────────────────── -->
+    <div class="panel" id="panel-knowledge">
+      <!-- Add form -->
+      <div class="add-form">
+        <div class="add-form-title">➕ Add Knowledge</div>
+        <textarea class="field field-sm" id="kq" placeholder="Question (e.g. What is the WiFi password?)" style="height:44px;min-height:44px;resize:none"></textarea>
+        <textarea class="field" id="ka" placeholder="Answer" style="margin-top:10px;min-height:80px"></textarea>
+        <select class="field field-sm" id="kcat" style="margin-top:10px;min-height:unset;height:44px;resize:none">
+          <option value="general">General</option>
+          <option value="person">Person</option>
+          <option value="document">Document</option>
+          <option value="event">Event</option>
+        </select>
+        <button class="btn-navy" onclick="addKnowledge()">Save to Knowledge Base</button>
+      </div>
+
+      <div class="section-hdr">
+        <div class="section-title">Stored Knowledge</div>
+      </div>
+      <div id="knowledgeList"><div class="empty"><div class="empty-icon">📖</div><div class="empty-text">Loading…</div></div></div>
+    </div>
+
+    <!-- ── FAMILY ─────────────────────────────────── -->
+    <div class="panel" id="panel-family">
+      <!-- Add form -->
+      <div class="add-form">
+        <div class="add-form-title">➕ Add Family Member</div>
+        <div class="grid2">
+          <input class="field field-sm" id="pname" placeholder="Full name *" style="min-height:unset">
+          <input class="field field-sm" id="prole" placeholder="Role (e.g. Mom)" style="min-height:unset">
+        </div>
+        <div class="grid2" style="margin-top:10px">
+          <input class="field field-sm" id="pdob" placeholder="Date of birth" style="min-height:unset">
+          <input class="field field-sm" id="pphone" placeholder="Phone number" style="min-height:unset">
+        </div>
+        <div class="grid2" style="margin-top:10px">
+          <input class="field field-sm" id="pecname" placeholder="Emergency contact name" style="min-height:unset">
+          <input class="field field-sm" id="pecnum" placeholder="Emergency contact number" style="min-height:unset">
+        </div>
+        <input class="field field-sm" id="pidnum" placeholder="ID / passport number" style="min-height:unset;margin-top:10px">
+        <button class="btn-navy" onclick="addPerson()">Add Family Member</button>
+      </div>
+
+      <div class="section-hdr">
+        <div class="section-title">Family Members</div>
+      </div>
+      <div id="familyList"><div class="empty"><div class="empty-icon">👨‍👩‍👧‍👦</div><div class="empty-text">Loading…</div></div></div>
+    </div>
+
+    <!-- ── DOCS ───────────────────────────────────────── -->
+    <div class="panel" id="panel-docs">
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-icon">📎</div>
+        <div class="drop-title">Upload a document</div>
+        <div class="drop-sub">PDF, Word, images, or text files · max 20 MB</div>
+        <div class="drop-types">PDF · DOCX · TXT · JPG · PNG</div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt,.csv,.jpg,.jpeg,.png,.webp" style="display:none">
+      </div>
+
+      <!-- Upload progress -->
+      <div class="upload-progress" id="uploadProgress" style="display:none">
+        <div class="progress-name" id="progressName"></div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-pct" id="progressPct">0%</div>
+      </div>
+
+      <div class="section-hdr" style="margin-top:4px">
+        <div class="section-title">Uploaded Documents</div>
+      </div>
+      <div id="docsList"><div class="empty"><div class="empty-icon">📂</div><div class="empty-text">Loading…</div></div></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Tab switching ───────────────────────────────────────────────────────────
+  function setTab(name, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+    document.getElementById('panel-' + name).classList.add('active')
+    btn.classList.add('active')
+    if (name === 'inbox')     loadInbox()
+    if (name === 'knowledge') loadKnowledge()
+    if (name === 'family')    loadFamily()
+    if (name === 'docs')      loadDocs()
+  }
+
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.createElement('div')
+    el.className = 'toast'
+    el.textContent = msg
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 2200)
+  }
+
+  function esc(str) {
+    if (!str) return ''
+    const d = document.createElement('div')
+    d.textContent = str
+    return d.innerHTML
+  }
+
+  function fmt(dateStr) {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  function roleEmoji(role) {
+    const map = { mom: '👩', dad: '👨', mother: '👩', father: '👨',
+      son: '👦', daughter: '👧', child: '🧒', baby: '👶',
+      grandma: '👵', grandpa: '👴', grandmother: '👵', grandfather: '👴' }
+    if (!role) return '👤'
+    return map[role.toLowerCase()] || '👤'
+  }
+
+  // ── INBOX ───────────────────────────────────────────────────────────────────
+  async function loadInbox() {
+    const list = document.getElementById('inboxList')
+    try {
+      const rows = await (await fetch('/api/pending')).json()
+      updateInboxBadge(rows.length)
+
+      if (rows.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">All caught up! No unanswered questions.</div></div>`
+        return
+      }
+
+      list.innerHTML = rows.map(q => `
+        <div class="card" id="q-${q.id}">
+          <div class="card-label">Question from family</div>
+          <div class="card-question">${esc(q.question)}</div>
+          <div class="card-meta">Asked ${fmt(q.created_at)}</div>
+          <textarea
+            class="field"
+            id="ans-${q.id}"
+            placeholder="Type your answer here…"
+            style="min-height:80px"
+          ></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn-coral" onclick="saveAnswer(${q.id})">Save Answer</button>
+          </div>
+        </div>
+      `).join('')
+    } catch {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load inbox. Is the server running?</div></div>`
+    }
+  }
+
+  function updateInboxBadge(count) {
+    const badge = document.getElementById('inboxBadge')
+    if (count > 0) {
+      badge.textContent = count
+      badge.style.display = 'flex'
+    } else {
+      badge.style.display = 'none'
+    }
+  }
+
+  async function saveAnswer(id) {
+    const textarea = document.getElementById('ans-' + id)
+    const answer   = textarea?.value.trim()
+    if (!answer) { textarea.focus(); return }
+
+    try {
+      const res = await fetch('/api/pending/' + id + '/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer })
+      })
+      if (!res.ok) throw new Error()
+
+      // Animate out
+      const card = document.getElementById('q-' + id)
+      card.style.transition = 'opacity 0.25s ease, transform 0.25s ease'
+      card.style.opacity = '0'
+      card.style.transform = 'translateY(-8px)'
+      setTimeout(() => { card.remove(); loadInbox() }, 260)
+
+      toast('✓ Answer saved to knowledge base')
+    } catch {
+      toast('Failed to save answer')
+    }
+  }
+
+  // ── KNOWLEDGE ───────────────────────────────────────────────────────────────
+  async function loadKnowledge() {
+    const list = document.getElementById('knowledgeList')
+    try {
+      const rows = await (await fetch('/api/knowledge')).json()
+      if (rows.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">📖</div><div class="empty-text">No knowledge stored yet.<br>Add your first entry above.</div></div>`
+        return
+      }
+      list.innerHTML = rows.map(k => `
+        <div class="entry" id="k-${k.id}">
+          <div class="entry-body">
+            <div class="entry-q">${esc(k.question)}</div>
+            <div class="entry-a">${esc(k.answer)}</div>
+            <span class="entry-cat">${esc(k.category)}</span>
+          </div>
+          <button class="del-btn" onclick="delKnowledge(${k.id})" title="Delete">✕</button>
+        </div>
+      `).join('')
+    } catch {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load knowledge base.</div></div>`
+    }
+  }
+
+  async function addKnowledge() {
+    const q   = document.getElementById('kq').value.trim()
+    const a   = document.getElementById('ka').value.trim()
+    const cat = document.getElementById('kcat').value
+    if (!q || !a) { toast('Please fill in both question and answer'); return }
+
+    try {
+      await fetch('/api/knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, answer: a, category: cat })
+      })
+      document.getElementById('kq').value = ''
+      document.getElementById('ka').value = ''
+      toast('✓ Added to knowledge base')
+      loadKnowledge()
+    } catch {
+      toast('Failed to save')
+    }
+  }
+
+  async function delKnowledge(id) {
+    try {
+      await fetch('/api/knowledge/' + id, { method: 'DELETE' })
+      const el = document.getElementById('k-' + id)
+      el.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+      el.style.opacity = '0'; el.style.transform = 'translateX(10px)'
+      setTimeout(() => { el.remove() }, 210)
+      toast('Removed')
+    } catch {
+      toast('Failed to remove')
+    }
+  }
+
+  // ── FAMILY ──────────────────────────────────────────────────────────────────
+  async function loadFamily() {
+    const list = document.getElementById('familyList')
+    try {
+      const rows = await (await fetch('/api/people')).json()
+      if (rows.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">👨‍👩‍👧‍👦</div><div class="empty-text">No family members added yet.</div></div>`
+        return
+      }
+      list.innerHTML = rows.map(p => `
+        <div class="person" id="p-${p.id}">
+          <div class="person-avatar">${roleEmoji(p.role)}</div>
+          <div class="person-body">
+            <div class="person-name">${esc(p.name)}</div>
+            ${p.role ? `<span class="person-role">${esc(p.role)}</span>` : ''}
+            ${p.date_of_birth ? `<div class="person-row"><span>Born</span>${esc(p.date_of_birth)}</div>` : ''}
+            ${p.phone_number  ? `<div class="person-row"><span>Phone</span>${esc(p.phone_number)}</div>` : ''}
+            ${p.id_number     ? `<div class="person-row"><span>ID</span>${esc(p.id_number)}</div>` : ''}
+            ${p.emergency_contact_name ? `<div class="person-row"><span>Emergency</span>${esc(p.emergency_contact_name)}${p.emergency_contact_number ? ' · ' + esc(p.emergency_contact_number) : ''}</div>` : ''}
+          </div>
+          <button class="del-btn" onclick="delPerson(${p.id})" title="Remove">✕</button>
+        </div>
+      `).join('')
+    } catch {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load family members.</div></div>`
+    }
+  }
+
+  async function addPerson() {
+    const name = document.getElementById('pname').value.trim()
+    if (!name) { toast('Please enter a name'); return }
+
+    const body = {
+      name,
+      role:                     document.getElementById('prole').value.trim(),
+      date_of_birth:            document.getElementById('pdob').value.trim(),
+      phone_number:             document.getElementById('pphone').value.trim(),
+      emergency_contact_name:   document.getElementById('pecname').value.trim(),
+      emergency_contact_number: document.getElementById('pecnum').value.trim(),
+      id_number:                document.getElementById('pidnum').value.trim()
+    }
+
+    try {
+      await fetch('/api/people', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      ;['pname','prole','pdob','pphone','pecname','pecnum','pidnum'].forEach(id => {
+        document.getElementById(id).value = ''
+      })
+      toast(`✓ ${name} added`)
+      loadFamily()
+    } catch {
+      toast('Failed to add person')
+    }
+  }
+
+  async function delPerson(id) {
+    try {
+      await fetch('/api/people/' + id, { method: 'DELETE' })
+      const el = document.getElementById('p-' + id)
+      el.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+      el.style.opacity = '0'; el.style.transform = 'translateX(10px)'
+      setTimeout(() => { el.remove() }, 210)
+      toast('Removed')
+    } catch {
+      toast('Failed to remove')
+    }
+  }
+
+  // ── DOCS ────────────────────────────────────────────────────────────────────
+
+  const dropZone    = document.getElementById('dropZone')
+  const fileInput   = document.getElementById('fileInput')
+  const uploadProg  = document.getElementById('uploadProgress')
+  const progBar     = document.getElementById('progressBar')
+  const progPct     = document.getElementById('progressPct')
+  const progName    = document.getElementById('progressName')
+
+  // Drag and drop
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragging') })
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'))
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('dragging')
+    const file = e.dataTransfer.files[0]
+    if (file) uploadFile(file)
+  })
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]) })
+
+  function docIcon (mime) {
+    if (mime === 'application/pdf')  return { icon: '📄', cls: 'pdf' }
+    if (mime?.includes('word'))      return { icon: '📝', cls: 'word' }
+    if (mime?.startsWith('image/'))  return { icon: '🖼️', cls: 'img' }
+    return { icon: '📃', cls: 'txt' }
+  }
+
+  function fmtSize (bytes) {
+    if (!bytes) return ''
+    if (bytes < 1024)       return bytes + ' B'
+    if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB'
+    return (bytes/(1024*1024)).toFixed(1) + ' MB'
+  }
+
+  async function loadDocs () {
+    const list = document.getElementById('docsList')
+    try {
+      const rows = await (await fetch('/api/documents')).json()
+      if (rows.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">📂</div><div class="empty-text">No documents uploaded yet.<br>Drop a file above to get started.</div></div>`
+        return
+      }
+      list.innerHTML = rows.map(d => {
+        const { icon, cls } = docIcon(d.mime_type)
+        return `
+          <div class="doc-card" id="doc-${d.id}">
+            <div class="doc-top">
+              <div class="doc-icon ${cls}">${icon}</div>
+              <div class="doc-body">
+                <div class="doc-name">${esc(d.name)}</div>
+                <div class="doc-meta">${fmtSize(d.size)} · ${fmt(d.created_at)}</div>
+              </div>
+              <button class="del-btn" onclick="delDoc(${d.id})" title="Remove">✕</button>
+            </div>
+            ${d.preview
+              ? `<div class="doc-preview">${esc(d.preview)}…</div>`
+              : `<div class="doc-no-text">No text could be extracted from this file</div>`}
+          </div>`
+      }).join('')
+    } catch {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load documents.</div></div>`
+    }
+  }
+
+  function uploadFile (file) {
+    progName.textContent = file.name
+    progBar.style.width  = '0%'
+    progPct.textContent  = '0%'
+    uploadProg.style.display = 'block'
+    dropZone.style.pointerEvents = 'none'
+    dropZone.style.opacity = '0.5'
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100)
+        progBar.style.width = pct + '%'
+        progPct.textContent = pct + '%'
+      }
+    })
+    xhr.addEventListener('load', () => {
+      uploadProg.style.display = 'none'
+      dropZone.style.pointerEvents = ''
+      dropZone.style.opacity = ''
+      fileInput.value = ''
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText)
+        toast(data.extracted ? `✓ ${file.name} uploaded & indexed` : `✓ ${file.name} uploaded (no text extracted)`)
+        loadDocs()
+      } else {
+        toast('Upload failed — check file type and size')
+      }
+    })
+    xhr.addEventListener('error', () => {
+      uploadProg.style.display = 'none'
+      dropZone.style.pointerEvents = ''
+      dropZone.style.opacity = ''
+      toast('Upload error')
+    })
+    xhr.open('POST', '/api/documents/upload')
+    xhr.send(formData)
+  }
+
+  async function delDoc (id) {
+    try {
+      await fetch('/api/documents/' + id, { method: 'DELETE' })
+      const el = document.getElementById('doc-' + id)
+      el.style.transition = 'opacity 0.2s ease, transform 0.2s ease'
+      el.style.opacity = '0'; el.style.transform = 'translateX(10px)'
+      setTimeout(() => el.remove(), 210)
+      toast('Document removed')
+    } catch { toast('Failed to remove') }
+  }
+
+  async function logout () {
+    await fetch('/api/logout', { method: 'POST' })
+    window.location.href = '/login.html'
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  loadInbox()
+</script>
+</body>
+</html>
