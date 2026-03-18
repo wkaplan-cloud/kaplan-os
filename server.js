@@ -349,6 +349,11 @@ app.delete('/api/documents/:id', requireParent, async (req, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL environment variable is not set.')
+  process.exit(1)
+}
+
 init().then(() => {
   app.listen(PORT, () => {
     console.log(`\n🏠 Kaplan OS running at http://localhost:${PORT}`)
@@ -356,6 +361,6 @@ init().then(() => {
     console.log(`   Parent Inbox: http://localhost:${PORT}/parent.html\n`)
   })
 }).catch(err => {
-  console.error('Failed to initialise database:', err.message)
+  console.error('Failed to initialise database:', err.message, err.stack)
   process.exit(1)
 })
