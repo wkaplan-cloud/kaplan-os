@@ -182,9 +182,34 @@ async function buildKnowledgeContext () {
 async function extractText (filePath, mimeType) {
   try {
     if (mimeType === 'application/pdf') {
+      // Try text extraction first (works for digital PDFs)
       const pdfParse = require('pdf-parse')
       const data = await pdfParse(fs.readFileSync(filePath))
-      return data.text.trim() || null
+      const text = data.text.trim()
+      if (text.length > 50) return text
+
+      // Scanned PDF — convert pages to images and run through OpenAI Vision
+      if (!openai) return '[Scanned PDF — add OPENAI_API_KEY to extract text]'
+      const os      = require('os')
+      const { execSync } = require('child_process')
+      const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf-'))
+      try {
+        execSync(`pdftoppm -png -r 150 -l 3 "${filePath}" "${tmpDir}/page"`, { timeout: 30000 })
+        const pages = fs.readdirSync(tmpDir).filter(f => f.endsWith('.png')).sort()
+        if (pages.length === 0) return null
+        const content = []
+        for (const page of pages) {
+          const base64 = fs.readFileSync(path.join(tmpDir, page)).toString('base64')
+          content.push({ type: 'image_url', image_url: { url: `data:image/png;base64,${base64}` } })
+        }
+        content.unshift({ type: 'text', text: 'Extract and transcribe ALL text from these PDF pages. Return plain text only.' })
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini', messages: [{ role: 'user', content }], max_tokens: 4000
+        })
+        return response.choices[0].message.content.trim() || null
+      } finally {
+        try { fs.rmSync(tmpDir, { recursive: true }) } catch {}
+      }
     }
     if (mimeType.includes('wordprocessingml') || mimeType === 'application/msword') {
       const mammoth = require('mammoth')
