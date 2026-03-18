@@ -72,6 +72,10 @@ function requireParent (req, res, next) {
   res.redirect('/login.html')
 }
 
+app.get('/api/me', (req, res) => {
+  res.json({ role: req.session?.role || null, name: req.session?.personName || null })
+})
+
 // ── Auth routes ───────────────────────────────────────────────────────────────
 
 app.post('/api/login', async (req, res) => {

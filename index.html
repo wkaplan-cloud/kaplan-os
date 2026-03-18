@@ -545,6 +545,13 @@
     navigator.serviceWorker.register('/sw.js').catch(() => {})
   }
 
+  // Hide parent inbox button for non-parents
+  fetch('/api/me').then(r => r.json()).then(me => {
+    if (me.role !== 'parent') {
+      document.getElementById('inboxBtn').style.display = 'none'
+    }
+  }).catch(() => {})
+
   loadBadge()
   input.focus()
 </script>
